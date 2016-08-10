@@ -1,3 +1,9 @@
+Explanation of fork
+===================
+
+Temporary fork so that I can continue development while https://github.com/720kb/angular-tooltips/pull/178 is being reviewed.
+
+
 Angular Tooltips
 ==================
 
