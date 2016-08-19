@@ -1,12 +1,12 @@
 /*
  * angular-tooltips-jogjayr
- * 1.1.8
+ * 1.1.9
  * 
  * Angular.js tooltips module.
  * http://720kb.github.io/angular-tooltips
  * 
  * MIT license
- * Wed Aug 10 2016
+ * Fri Aug 19 2016
  */
 /*global angular,window*/
 (function withAngular(angular, window) {
@@ -139,6 +139,12 @@
       element.removeAttr('tooltip-speed');
     }
 
+    if (element.attr('tooltip-viewport') !== undefined) {
+
+      attributesToAdd['tooltip-viewport'] = element.attr('tooltip-viewport');
+      element.removeAttr('tooltip-viewport');
+    }
+
     return attributesToAdd;
   }
   , getStyle = function getStyle(anElement) {
@@ -180,19 +186,24 @@
       tipElement.remove();
     }
   }
-  , isOutOfPage = function isOutOfPage(theTipElement) {
+  , isOutOfView = function isOutOfView(theTipElement, viewportElement) {
 
     if (theTipElement) {
-      var squarePosition = theTipElement[0].getBoundingClientRect();
+      var squarePosition = theTipElement[0].getBoundingClientRect()
+        , viewportPosition = viewportElement[0].getBoundingClientRect();
 
       if (squarePosition.top < 0 ||
         squarePosition.top > window.document.body.offsetHeight ||
+        squarePosition.top < viewportPosition.top ||
         squarePosition.left < 0 ||
         squarePosition.left > window.document.body.offsetWidth ||
+        squarePosition.left < viewportPosition.left ||
         squarePosition.bottom < 0 ||
         squarePosition.bottom > window.document.body.offsetHeight ||
+        squarePosition.bottom > viewportPosition.bottom ||
         squarePosition.right < 0 ||
-        squarePosition.right > window.document.body.offsetWidth) {
+        squarePosition.right > window.document.body.offsetWidth ||
+        squarePosition.right > viewportPosition.right) {
 
         theTipElement.css({
           'top': '',
@@ -219,7 +230,8 @@
       'closeButton': false,
       'size': '',
       'speed': 'steady',
-      'tooltipTemplateUrlCache': false
+      'tooltipTemplateUrlCache': false,
+      'viewport': ''
     };
 
     return {
@@ -263,6 +275,12 @@
         throw new Error('You can not have a controller without a template or templateUrl defined');
       }
 
+      if ($attrs.tooltipViewport &&
+        !$attrs.tooltipSmart) {
+
+        throw new Error('You can not have a tooltip-viewport without tooltip-smart enabled');
+      }
+
       var oldTooltipSide = '_' + tooltipsConf.side
         , oldTooltipShowTrigger = tooltipsConf.showTrigger
         , oldTooltipHideTrigger = tooltipsConf.hideTrigger
@@ -278,6 +296,7 @@
       $attrs.tooltipCloseButton = $attrs.tooltipCloseButton || tooltipsConf.closeButton.toString();
       $attrs.tooltipSize = $attrs.tooltipSize || tooltipsConf.size;
       $attrs.tooltipSpeed = $attrs.tooltipSpeed || tooltipsConf.speed;
+      $attrs.tooltipViewport = $attrs.tooltipViewport || tooltipsConf.viewport;
       $attrs.tooltipAppendToBody = $attrs.tooltipAppendToBody === 'true';
 
       $transcludeFunc($scope, function onTransclusionDone(element, scope) {
@@ -288,6 +307,9 @@
           , tipTipElement = angular.element(window.document.createElement('tip-tip'))
           , closeButtonElement = angular.element(window.document.createElement('span'))
           , tipArrowElement = angular.element(window.document.createElement('tip-arrow'))
+          , viewportElement = $attrs.tooltipViewport ? 
+                              angular.element(window.document.querySelector($attrs.tooltipViewport)) :
+                              angular.element(window.document.body)
           , whenActivateMultilineCalculation = function whenActivateMultilineCalculation() {
 
             return tipContElement.html();
@@ -311,19 +333,19 @@
               switch ($attrs.tooltipSide) {
                 case 'top': {
 
-                  if (isOutOfPage(tipElement)) {
+                  if (isOutOfView(tipElement, viewportElement)) {
 
                     tooltipElement.removeClass('_top');
                     tooltipElement.addClass('_left');
-                    if (isOutOfPage(tipElement)) {
+                    if (isOutOfView(tipElement, viewportElement)) {
 
                       tooltipElement.removeClass('_left');
                       tooltipElement.addClass('_bottom');
-                      if (isOutOfPage(tipElement)) {
+                      if (isOutOfView(tipElement, viewportElement)) {
 
                         tooltipElement.removeClass('_bottom');
                         tooltipElement.addClass('_right');
-                        if (isOutOfPage(tipElement)) {
+                        if (isOutOfView(tipElement, viewportElement)) {
 
                           tooltipElement.removeClass('_right');
                           tooltipElement.addClass('_top');
@@ -336,19 +358,19 @@
 
                 case 'left': {
 
-                  if (isOutOfPage(tipElement)) {
+                  if (isOutOfView(tipElement, viewportElement)) {
 
                     tooltipElement.removeClass('_left');
                     tooltipElement.addClass('_bottom');
-                    if (isOutOfPage(tipElement)) {
+                    if (isOutOfView(tipElement, viewportElement)) {
 
                       tooltipElement.removeClass('_bottom');
                       tooltipElement.addClass('_right');
-                      if (isOutOfPage(tipElement)) {
+                      if (isOutOfView(tipElement, viewportElement)) {
 
                         tooltipElement.removeClass('_right');
                         tooltipElement.addClass('_top');
-                        if (isOutOfPage(tipElement)) {
+                        if (isOutOfView(tipElement, viewportElement)) {
 
                           tooltipElement.removeClass('_top');
                           tooltipElement.addClass('_left');
@@ -361,19 +383,19 @@
 
                 case 'bottom': {
 
-                  if (isOutOfPage(tipElement)) {
+                  if (isOutOfView(tipElement, viewportElement)) {
 
                     tooltipElement.removeClass('_bottom');
                     tooltipElement.addClass('_left');
-                    if (isOutOfPage(tipElement)) {
+                    if (isOutOfView(tipElement, viewportElement)) {
 
                       tooltipElement.removeClass('_left');
                       tooltipElement.addClass('_top');
-                      if (isOutOfPage(tipElement)) {
+                      if (isOutOfView(tipElement, viewportElement)) {
 
                         tooltipElement.removeClass('_top');
                         tooltipElement.addClass('_right');
-                        if (isOutOfPage(tipElement)) {
+                        if (isOutOfView(tipElement, viewportElement)) {
 
                           tooltipElement.removeClass('_right');
                           tooltipElement.addClass('_bottom');
@@ -386,19 +408,19 @@
 
                 case 'right': {
 
-                  if (isOutOfPage(tipElement)) {
+                  if (isOutOfView(tipElement, viewportElement)) {
 
                     tooltipElement.removeClass('_right');
                     tooltipElement.addClass('_top');
-                    if (isOutOfPage(tipElement)) {
+                    if (isOutOfView(tipElement, viewportElement)) {
 
                       tooltipElement.removeClass('_top');
                       tooltipElement.addClass('_left');
-                      if (isOutOfPage(tipElement)) {
+                      if (isOutOfView(tipElement, viewportElement)) {
 
                         tooltipElement.removeClass('_left');
                         tooltipElement.addClass('_bottom');
-                        if (isOutOfPage(tipElement)) {
+                        if (isOutOfView(tipElement, viewportElement)) {
 
                           tooltipElement.removeClass('_bottom');
                           tooltipElement.addClass('_right');
@@ -742,6 +764,16 @@
               oldSpeed = newValue;
             }
           }
+          , onTooltipViewportChange = function onTooltipViewportChange(newValue) {
+
+            if (newValue) {
+
+              $attrs.tooltipViewport = angular.element(window.document.querySelector($attrs.tooltipViewport));
+            } else {
+
+              $attrs.tooltipViewport = angular.element(window.document.body);
+            }
+          }
           , unregisterOnTooltipTemplateChange = $attrs.$observe('tooltipTemplate', onTooltipTemplateChange)
           , unregisterOnTooltipTemplateUrlChange = $attrs.$observe('tooltipTemplateUrl', onTooltipTemplateUrlChange)
           , unregisterOnTooltipTemplateUrlCacheChange = $attrs.$observe('tooltipTemplateUrlCache', onTooltipTemplateUrlCacheChange)
@@ -754,6 +786,7 @@
           , unregisterOnTooltipControllerChange = $attrs.$observe('tooltipController', onTooltipTemplateControllerChange)
           , unregisterOnTooltipSizeChange = $attrs.$observe('tooltipSize', onTooltipSizeChange)
           , unregisterOnTooltipSpeedChange = $attrs.$observe('tooltipSpeed', onTooltipSpeedChange)
+          , unregisterOnTooltipViewportChange = $attrs.$observe('tooltipViewport', onTooltipViewportChange)
           , unregisterTipContentChangeWatcher = scope.$watch(whenActivateMultilineCalculation, calculateIfMultiLine);
 
         closeButtonElement.attr({
@@ -813,6 +846,7 @@
           unregisterOnTooltipCloseButtonChange();
           unregisterOnTooltipSizeChange();
           unregisterOnTooltipSpeedChange();
+          unregisterOnTooltipViewportChange();
           unregisterTipContentChangeWatcher();
           resizeObserver.remove();
           element.off($attrs.tooltipShowTrigger + ' ' + $attrs.tooltipHideTrigger);
