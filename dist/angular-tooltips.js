@@ -1,12 +1,12 @@
 /*
  * angular-tooltips-jogjayr
- * 1.1.9
+ * 1.2.0
  * 
  * Angular.js tooltips module.
  * http://720kb.github.io/angular-tooltips
  * 
  * MIT license
- * Fri Aug 19 2016
+ * Wed Oct 05 2016
  */
 /*global angular,window*/
 (function withAngular(angular, window) {
@@ -145,6 +145,12 @@
       element.removeAttr('tooltip-viewport');
     }
 
+    if (element.attr('tooltip-show-on-truncate') !== undefined) {
+
+      attributesToAdd['tooltip-show-on-truncate'] = element.attr('tooltip-show-on-truncate');
+      element.removeAttr('tooltip-show-on-truncate');
+    }
+
     return attributesToAdd;
   }
   , getStyle = function getStyle(anElement) {
@@ -231,7 +237,8 @@
       'size': '',
       'speed': 'steady',
       'tooltipTemplateUrlCache': false,
-      'viewport': ''
+      'viewport': '',
+      'showOnTruncate': false
     };
 
     return {
@@ -297,6 +304,7 @@
       $attrs.tooltipSize = $attrs.tooltipSize || tooltipsConf.size;
       $attrs.tooltipSpeed = $attrs.tooltipSpeed || tooltipsConf.speed;
       $attrs.tooltipViewport = $attrs.tooltipViewport || tooltipsConf.viewport;
+      $attrs.tooltipShowOnTruncate = $attrs.tooltipShowOnTruncate === 'true' || tooltipsConf.showOnTruncate;
       $attrs.tooltipAppendToBody = $attrs.tooltipAppendToBody === 'true';
 
       $transcludeFunc($scope, function onTransclusionDone(element, scope) {
@@ -325,7 +333,38 @@
               tooltipElement.removeClass('_multiline');
             }
           }
+          , isTruncated = function isTruncated() {
+            var side,
+                tooltipElementParentStyle = window.getComputedStyle(tooltipElement[0].parentNode),
+                parentPadding = {
+                  'top': tooltipElementParentStyle.getPropertyValue('padding-top'),
+                  'right': tooltipElementParentStyle.getPropertyValue('padding-right'),
+                  'bottom': tooltipElementParentStyle.getPropertyValue('padding-bottom'),
+                  'left': tooltipElementParentStyle.getPropertyValue('padding-left')
+                };
+
+            for (side in parentPadding) {
+
+              if (parentPadding.hasOwnProperty(side)) {
+
+                parentPadding[side] = parseInt(parentPadding[side].substring(0, parentPadding[side].indexOf('px')), 10);
+                parentPadding[side] = isNaN(parentPadding[side]) ? 0 : parentPadding[side];
+              }
+            }
+
+            if (tooltipElement[0].clientWidth < tooltipElement[0].parentNode.clientWidth - parentPadding.left - parentPadding.right &&
+                tooltipElement[0].clientHeight < tooltipElement[0].parentNode.clientHeight - parentPadding.top - parentPadding.bottom) {
+
+              return false;
+            }
+            return true;
+          }
           , onTooltipShow = function onTooltipShow(event) {
+
+            if ($attrs.tooltipShowOnTruncate && !isTruncated()) {
+
+              return;
+            }
 
             tipElement.addClass('_hidden');
             if ($attrs.tooltipSmart) {
@@ -774,6 +813,13 @@
               $attrs.tooltipViewport = angular.element(window.document.body);
             }
           }
+          , onTooltipShowOnTruncateChange = function onTooltipShowOnTruncateChange() {
+
+            if (typeof $attrs.tooltipShowOnTruncate !== 'boolean') {
+
+              $attrs.tooltipShowOnTruncate = $attrs.tooltipShowOnTruncate === 'true';
+            }
+          }
           , unregisterOnTooltipTemplateChange = $attrs.$observe('tooltipTemplate', onTooltipTemplateChange)
           , unregisterOnTooltipTemplateUrlChange = $attrs.$observe('tooltipTemplateUrl', onTooltipTemplateUrlChange)
           , unregisterOnTooltipTemplateUrlCacheChange = $attrs.$observe('tooltipTemplateUrlCache', onTooltipTemplateUrlCacheChange)
@@ -787,6 +833,7 @@
           , unregisterOnTooltipSizeChange = $attrs.$observe('tooltipSize', onTooltipSizeChange)
           , unregisterOnTooltipSpeedChange = $attrs.$observe('tooltipSpeed', onTooltipSpeedChange)
           , unregisterOnTooltipViewportChange = $attrs.$observe('tooltipViewport', onTooltipViewportChange)
+          , unregisterOnTooltipShowOnTruncateChange = $attrs.$observe('tooltipShowOnTruncate', onTooltipShowOnTruncateChange)
           , unregisterTipContentChangeWatcher = scope.$watch(whenActivateMultilineCalculation, calculateIfMultiLine);
 
         closeButtonElement.attr({
@@ -847,6 +894,7 @@
           unregisterOnTooltipSizeChange();
           unregisterOnTooltipSpeedChange();
           unregisterOnTooltipViewportChange();
+          unregisterOnTooltipShowOnTruncateChange();
           unregisterTipContentChangeWatcher();
           resizeObserver.remove();
           element.off($attrs.tooltipShowTrigger + ' ' + $attrs.tooltipHideTrigger);
